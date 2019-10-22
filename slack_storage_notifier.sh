@@ -1,6 +1,12 @@
 #!/bin/bash
+# To debug this script
+# set SLACK_TEST_MODE variable with not empty string.
+
 # ------------
 hostname=${HOSTNAME}
+local_ip=$(echo $(hostname -I) | xargs)
+public_ip=$(dig @resolver1.opendns.com ANY myip.opendns.com +short)
+alarm=""
 # ------------
 # Read webhook URL param
 webhook_url=$1
@@ -23,7 +29,7 @@ fi
 # ------------
 # Execute df-h
 text="$(df -h)"
-pretext="Summary of available disk storage space on *$hostname*."
+pretext="Summary of available disk storage space on *\`$hostname\`*."
 # ------------
 # Generate the JSON payload to POST to slack
 json="{"
@@ -38,13 +44,18 @@ do
         words=($textLine)
         if [[ ${words[0]} == "Filesystem" ]]; then
                 # This is the header line of df- h command
+		json+="{\"author_name\":\"$hostname\", \"author_icon\": \"https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Compute__Networking_copy_Amazon_EC2---512.png\","
+		json+="\"text\":\"Private IP: $local_ip\nPublic IP: $public_ip\""
+		json+="},"
                 json+="{\"text\": \"\`\`\`\n$textLine\n\`\`\`\", \"pretext\":\"$pretext\", \"color\":\"#0080ff\"},"
         else
                 # Check the returned 'used' column to determine color
                 if [[ ${words[4]} > 89 ]]; then
                         color="danger"
-                elif [[ ${words[4]} > 60 ]]; then
+			alarm="danger"
+                elif [[ ${words[4]} > 69 ]]; then
                         color="warning"
+			alarm="warning"
                 else
                         color="good"
                 fi
@@ -57,4 +68,7 @@ json="${json::-1}"
 # -----------
 # Complete JSON payload and make API request
 json+="]}"
-curl -s -d "payload=$json" "$webhook_url"
+
+if [[ $alarm != "" || $SLACK_TEST_MODE != "" ]]; then
+    curl -s -d "payload=$json" "$webhook_url"
+fi

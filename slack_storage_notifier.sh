@@ -68,13 +68,12 @@ do
 		json+="\"text\":\"Host Name: $hostname\nPrivate IP: $local_ip\nPublic IP: $public_ip\""
 		json+="},"
                 json+="{\"text\": \"\`\`\`\n$textLine\n\`\`\`\", \"pretext\":\"$pretext\", \"color\":\"#0080ff\"},"
-        elif [[ "$SKIP_PARTITIONS" == *"${words[0]}"* ]]; then
-                color="#0080ff"
-                json+="{\"text\": \"\`\`\`\n$textLine\n\`\`\`\", \"color\":\"$color\"},"
         else
                 # Check the returned 'used' column to determine color
                 used=${words[4]%\%}
-                if [[ $used -gt 89 ]]; then
+		if [[ "$SKIP_PARTITIONS" == *"${words[0]}"* ]]; then
+                        color="#808080"
+                elif [[ $used -gt 89 ]]; then
                         color="danger"
 			alarm="danger"
                 elif [[ $used -gt 69 ]]; then

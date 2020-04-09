@@ -2,8 +2,8 @@
 # To debug this script
 # set SLACK_TEST_MODE variable with not empty string.
 
-SLACK_TEST_MODE="yes"
-# SLACK_WEBHOOK_URL="https://hooks.slack.com/services/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"
+# SLACK_TEST_MODE="yes"
+# SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
 # SKIP_PARTITIONS="/dev/loop1;/dev/loop2;/dev/loop3;/dev/loop4"
 
 # ------------

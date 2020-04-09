@@ -95,5 +95,5 @@ json="${json::-1}"
 json+="]}"
 
 if [[ $alarm != "" || $SLACK_TEST_MODE != "" ]]; then
-    curl -s -d "payload=$json" "$webhook_url"]
+    curl -s -d "payload=$json" "$webhook_url"
 fi

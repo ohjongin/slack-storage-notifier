@@ -7,8 +7,21 @@ hostname=${HOSTNAME}
 local_ip=$(echo $(hostname -I) | xargs)
 public_ip=$(dig @resolver1.opendns.com ANY myip.opendns.com +short)
 alarm=""
+
+# ------------
+# Read service name param
+service_name=$1
+if [[ $service_name == "" ]]; then
+        service_name=${SERVICENAME}
+        if [[ $service_name == "" ]]; then
+                echo "No service_name specified"
+                exit 1
+        fi
+fi
+
 # ------------
 # Read webhook URL param
+shift
 webhook_url=$1
 if [[ $webhook_url == "" ]]; then
         webhook_url=${SLACK_WEBHOOK_URL}
@@ -17,6 +30,7 @@ if [[ $webhook_url == "" ]]; then
                 exit 1
         fi
 fi
+
 # ------------
 shift
 channel=$1
@@ -44,21 +58,23 @@ do
         words=($textLine)
         if [[ ${words[0]} == "Filesystem" ]]; then
                 # This is the header line of df- h command
-		json+="{\"author_name\":\"$hostname\", \"author_icon\": \"https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Compute__Networking_copy_Amazon_EC2---512.png\","
-		json+="\"text\":\"Private IP: $local_ip\nPublic IP: $public_ip\""
+		json+="{\"author_name\":\"$service_name\", \"author_icon\": \"https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Compute__Networking_copy_Amazon_EC2---512.png\","
+		json+="\"text\":\"Host Name: $hostname\nPrivate IP: $local_ip\nPublic IP: $public_ip\""
 		json+="},"
                 json+="{\"text\": \"\`\`\`\n$textLine\n\`\`\`\", \"pretext\":\"$pretext\", \"color\":\"#0080ff\"},"
         else
                 # Check the returned 'used' column to determine color
-                if [[ ${words[4]} > 89 ]]; then
+                used=${words[4]%\%}
+                if [[ $used -gt 89 ]]; then
                         color="danger"
 			alarm="danger"
-                elif [[ ${words[4]} > 69 ]]; then
+                elif [[ $used -gt 69 ]]; then
                         color="warning"
 			alarm="warning"
                 else
                         color="good"
                 fi
+	
                 json+="{\"text\": \"\`\`\`\n$textLine\n\`\`\`\", \"color\":\"$color\"},"
         fi
 done

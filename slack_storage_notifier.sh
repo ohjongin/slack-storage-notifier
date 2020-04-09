@@ -2,6 +2,10 @@
 # To debug this script
 # set SLACK_TEST_MODE variable with not empty string.
 
+SLACK_TEST_MODE="yes"
+# SLACK_WEBHOOK_URL="https://hooks.slack.com/services/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"
+# SKIP_PARTITIONS="/dev/loop1;/dev/loop2;/dev/loop3;/dev/loop4"
+
 # ------------
 hostname=${HOSTNAME}
 local_ip=$(echo $(hostname -I) | xargs)
@@ -40,10 +44,12 @@ if [[ $channel == "" ]]; then
                 echo "No channel specified, posting to default channel."
         fi
 fi
+
 # ------------
 # Execute df-h
 text="$(df -h)"
 pretext="Summary of available disk storage space on *\`$hostname\`*."
+
 # ------------
 # Generate the JSON payload to POST to slack
 json="{"
@@ -62,6 +68,9 @@ do
 		json+="\"text\":\"Host Name: $hostname\nPrivate IP: $local_ip\nPublic IP: $public_ip\""
 		json+="},"
                 json+="{\"text\": \"\`\`\`\n$textLine\n\`\`\`\", \"pretext\":\"$pretext\", \"color\":\"#0080ff\"},"
+        elif [[ "$SKIP_PARTITIONS" == *"${words[0]}"* ]]; then
+                color="#0080ff"
+                json+="{\"text\": \"\`\`\`\n$textLine\n\`\`\`\", \"color\":\"$color\"},"
         else
                 # Check the returned 'used' column to determine color
                 used=${words[4]%\%}
@@ -74,17 +83,17 @@ do
                 else
                         color="good"
                 fi
-	
                 json+="{\"text\": \"\`\`\`\n$textLine\n\`\`\`\", \"color\":\"$color\"},"
         fi
 done
 
 # trim trailing comma
 json="${json::-1}"
+
 # -----------
 # Complete JSON payload and make API request
 json+="]}"
 
 if [[ $alarm != "" || $SLACK_TEST_MODE != "" ]]; then
-    curl -s -d "payload=$json" "$webhook_url"
+    curl -s -d "payload=$json" "$webhook_url"]
 fi

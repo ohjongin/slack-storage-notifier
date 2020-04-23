@@ -20,7 +20,7 @@ if [[ $service_name == "" ]]; then
         service_name=${SERVICE_NAME}
         if [[ $service_name == "" ]]; then
                 echo "No service_name specified"
-                exit 1
+                service_name=${HOSTNAME}
         fi
 fi
 

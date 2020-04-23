@@ -2,6 +2,7 @@
 # To debug this script
 # set SLACK_TEST_MODE variable with not empty string.
 
+# SERVICE_NAME="vi-svc.com"
 # SLACK_TEST_MODE="yes"
 # SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
 # SKIP_PARTITIONS="/dev/loop1;/dev/loop2;/dev/loop3;/dev/loop4"
@@ -16,7 +17,7 @@ alarm=""
 # Read service name param
 service_name=$1
 if [[ $service_name == "" ]]; then
-        service_name=${SERVICENAME}
+        service_name=${SERVICE_NAME}
         if [[ $service_name == "" ]]; then
                 echo "No service_name specified"
                 exit 1

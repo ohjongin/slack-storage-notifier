@@ -95,5 +95,16 @@ json="${json::-1}"
 json+="]}"
 
 if [[ $alarm != "" || $SLACK_TEST_MODE != "" ]]; then
+    cd "$(dirname "$0")";
+    echo $(pwd)
+
+    if [ -f ./slack-storage-notifier.log ]; then
+        echo "Already notified !"
+        find . -name *.log -mmin +60 -print
+        find . -name *.log -mmin +60 -exec rm -f {} \;
+        exit 1
+    fi
+
     curl -s -d "payload=$json" "$webhook_url"
+    touch slack-storage-notifier.log
 fi

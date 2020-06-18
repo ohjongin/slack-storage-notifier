@@ -7,6 +7,9 @@
 # SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
 # SKIP_PARTITIONS="/dev/loop1;/dev/loop2;/dev/loop3;/dev/loop4"
 
+echo "SKIP_PARTITIONS:" ${SKIP_PARTITIONS}
+partition_array=($(echo ${SKIP_PARTITIONS} | tr ";" "\n"))
+
 # ------------
 hostname=${HOSTNAME}
 local_ip=$(echo $(hostname -I) | xargs)
@@ -17,11 +20,10 @@ alarm=""
 # Read service name param
 service_name=$1
 if [[ $service_name == "" ]]; then
-        service_name=${SERVICE_NAME}
-        if [[ $service_name == "" ]]; then
-                echo "No service_name specified"
-                service_name=${HOSTNAME}
-        fi
+    service_name=${SERVICE_NAME}
+    if [[ $service_name == "" ]]; then
+        service_name=${HOSTNAME}
+    fi
 fi
 
 # ------------
@@ -29,21 +31,21 @@ fi
 shift
 webhook_url=$1
 if [[ $webhook_url == "" ]]; then
-        webhook_url=${SLACK_WEBHOOK_URL}
-        if [[ $webhook_url == "" ]]; then
-                echo "No webhook_url specified"
-                exit 1
-        fi
+    webhook_url=${SLACK_WEBHOOK_URL}
+    if [[ $webhook_url == "" ]]; then
+        echo "No webhook_url specified"
+        exit 1
+    fi
 fi
 
 # ------------
 shift
 channel=$1
 if [[ $channel == "" ]]; then
-        channel=${SLACK_CHANNEL}
-        if [[ $channel == "" ]]; then
-                echo "No channel specified, posting to default channel."
-        fi
+    channel=${SLACK_CHANNEL}
+    if [[ $channel == "" ]]; then
+        echo "No channel specified, posting to default channel."
+    fi
 fi
 
 # ------------
@@ -55,36 +57,57 @@ pretext="Summary of available disk storage space on *\`$hostname\`*."
 # Generate the JSON payload to POST to slack
 json="{"
 if [[ $channel != "" ]]; then
-        json+="\"channel\": \"$channel\","
+    json+="\"channel\": \"$channel\","
 fi
+
 json+="\"attachments\":["
 IFS=$'\n'
 for textLine in $text
 do
-        IFS=$' '
-        words=($textLine)
-        if [[ ${words[0]} == "Filesystem" ]]; then
-                # This is the header line of df- h command
-		json+="{\"author_name\":\"$service_name\", \"author_icon\": \"https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Compute__Networking_copy_Amazon_EC2---512.png\","
-		json+="\"text\":\"Host Name: $hostname\nPrivate IP: $local_ip\nPublic IP: $public_ip\""
+    IFS=$' '
+    words=($textLine)
+
+    # df -h output format for Ubuntu
+    # Filesystem      Size  Used Avail Use% Mounted on
+    # /dev/xvda1       20G  6.1G   14G  32% /    
+    if [[ ${words[0]} == "Filesystem" ]]; then
+        # This is the header line of df- h command
+        json+="{\"author_name\":\"$service_name\", \"author_icon\": \"https://cdn2.iconfinder.com/data/icons/amazon-aws-stencils/100/Compute__Networking_copy_Amazon_EC2---512.png\","
+        json+="\"text\":\"Host Name: $hostname\nPrivate IP: $local_ip\nPublic IP: $public_ip\""
 		json+="},"
-                json+="{\"text\": \"\`\`\`\n$textLine\n\`\`\`\", \"pretext\":\"$pretext\", \"color\":\"#0080ff\"},"
-        else
-                # Check the returned 'used' column to determine color
-                used=${words[4]%\%}
-		if [[ "$SKIP_PARTITIONS" == *"${words[0]}"* ]]; then
-                        color="#808080"
-                elif [[ $used -gt 89 ]]; then
-                        color="danger"
+        json+="{\"text\": \"\`\`\`\n$textLine\n\`\`\`\", \"pretext\":\"$pretext\", \"color\":\"#0080ff\"},"
+    else
+        # Check the returned 'used' column to determine color
+        used=${words[4]%\%}
+        if [[ ! -z "${SKIP_PARTITIONS}" ]]; then
+            for partition in "${partition_array[@]}"
+            do
+                if [[ "$SKIP_PARTITIONS" == *"*"* ]]; then
+                    # echo "[DEBUG] Comparing..." ${filter} "vs." ${words[0]}
+                    if [[ *"${partition}"* == "${words[0]}" ]]; then
+                        echo "[DEBUG] Wildcard detected ..." ${partition} "vs" ${words[0]}
+                        color="#808080"                    
+                        break
+                    fi
+                elif [[ "${partition}" == "${words[0]}" ]]; then
+                    color="#808080"
+                    break
+                fi 
+            done
+        elif [[ "$SKIP_PARTITIONS" == *"${words[0]}"* ]]; then
+            color="#808080"
+        elif [[ $used -gt 89 ]]; then
+            color="danger"
 			alarm="danger"
-                elif [[ $used -gt 69 ]]; then
-                        color="warning"
+        elif [[ $used -gt 69 ]]; then
+            color="warning"
 			alarm="warning"
-                else
-                        color="good"
-                fi
-                json+="{\"text\": \"\`\`\`\n$textLine\n\`\`\`\", \"color\":\"$color\"},"
+        else
+            color="good"
         fi
+
+        json+="{\"text\": \"\`\`\`\n$textLine\n\`\`\`\", \"color\":\"$color\"},"
+    fi
 done
 
 # trim trailing comma
@@ -93,6 +116,9 @@ json="${json::-1}"
 # -----------
 # Complete JSON payload and make API request
 json+="]}"
+
+echo $json
+exit 0
 
 if [[ $alarm != "" || $SLACK_TEST_MODE != "" ]]; then
     cd "$(dirname "$0")";

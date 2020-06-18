@@ -82,7 +82,7 @@ do
         if [[ ! -z "${SKIP_PARTITIONS}" ]]; then
             for partition in "${partition_array[@]}"
             do
-                if [[ "$SKIP_PARTITIONS" == *"*"* ]]; then
+                if [[ "$SKIP_PARTITIONS" == *"@"* ]]; then
                     # echo "[DEBUG] Comparing..." ${filter} "vs." ${words[0]}
                     if [[ *"${partition}"* == "${words[0]}" ]]; then
                         echo "[DEBUG] Wildcard detected ..." ${partition} "vs" ${words[0]}
@@ -116,9 +116,6 @@ json="${json::-1}"
 # -----------
 # Complete JSON payload and make API request
 json+="]}"
-
-echo $json
-exit 0
 
 if [[ $alarm != "" || $SLACK_TEST_MODE != "" ]]; then
     cd "$(dirname "$0")";

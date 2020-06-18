@@ -7,7 +7,6 @@
 # SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
 # SKIP_PARTITIONS="/dev/loop1;/dev/loop2;/dev/loop3;/dev/loop4"
 
-echo "SKIP_PARTITIONS:" ${SKIP_PARTITIONS}
 partition_array=($(echo ${SKIP_PARTITIONS} | tr ";" "\n"))
 
 # ------------
@@ -83,9 +82,10 @@ do
             for partition in "${partition_array[@]}"
             do
                 if [[ "$SKIP_PARTITIONS" == *"@"* ]]; then
-                    # echo "[DEBUG] Comparing..." ${filter} "vs." ${words[0]}
-                    if [[ *"${partition}"* == "${words[0]}" ]]; then
-                        echo "[DEBUG] Wildcard detected ..." ${partition} "vs" ${words[0]}
+                    name=$(echo "${partition}" | tr -d @)
+                    # echo "[DEBUG] Comparing..." ${name} "vs." ${words[0]}
+                    if [[ ${words[0]} == *"${name}"* ]]; then
+                        # echo "[DEBUG] Wildcard detected ..." ${name} "vs" ${words[0]}
                         color="#808080"                    
                         break
                     fi
